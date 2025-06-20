@@ -6,115 +6,175 @@
 
 ## Project Structure
 
-### 1. Database Setup
-
 ```sql
-CREATE DATABASE sql_p1;
+CREATE TABLE table1
+     (
+       Month_of_order_date  DATE,
+       Catogory             VARCHAR(20),
+       Target               INT
+     );
+SELECT * FROM table1
 
-CREATE TABLE retail_sales
-(
-    transactions_id INT PRIMARY KEY,
-    sale_date DATE,	
-    sale_time TIME,
-    customer_id INT,	
-    gender VARCHAR(10),
-    age INT,
-    category VARCHAR(35),
-    quantity INT,
-    price_per_unit FLOAT,	
-    cogs FLOAT,
-    total_sale FLOAT
-);
+---
+
+CREATE TABLE table2
+     (
+       Order_ID	     VARCHAR(20),
+	   Amount	     INT,
+	   Profit        INT,
+	   Quantity	     INT,
+	   Category      VARCHAR(20),
+	   Sub_Category  VARCHAR(20)
+      );  
+SELECT * FROM table2
+
+---
+
+CREATE TABLE table3
+       (
+          Order_ID        VARCHAR(20),
+		  Order_date      DATE,
+		  CustomerName    VARCHAR(30),
+		  state           VARCHAR(30),
+		  City            VARCHAR(30)
+	    );
+SELECT * FROM table3
+
 ```
-
-### 2. Data Exploration & Cleaning
-
-- **Record Count**: Determine the total number of records in the dataset.
-- **Customer Count**: Find out how many unique customers are in the dataset.
-- **Category Count**: Identify all unique product categories in the dataset.
-- **Null Value Check**: Check for any null values in the dataset and delete records with missing data.
-
-```sql
-SELECT COUNT(*)
-FROM retail_sales;
-
-SELECT COUNT(DISTINCT customer_id)
-FROM retail_sales;
-
-SELECT DISTINCT category
-FROM retail_sales;
-
-SELECT *
-FROM retail_sales
-WHERE 
-    sale_date IS NULL OR sale_time IS NULL OR customer_id IS NULL OR 
-    gender IS NULL OR age IS NULL OR category IS NULL OR 
-    quantity IS NULL OR price_per_unit IS NULL OR cogs IS NULL;
-
-DELETE FROM retail_sales
-WHERE 
-    sale_date IS NULL OR sale_time IS NULL OR customer_id IS NULL OR 
-    gender IS NULL OR age IS NULL OR category IS NULL OR 
-    quantity IS NULL OR price_per_unit IS NULL OR cogs IS NULL;
-```
-
-### 3. Data Analysis & Findings
 
 The following SQL queries were developed to answer specific business questions:
 
-1. **Write a SQL query to retrieve all columns for sales made on '2022-11-05**:
-```sql
-SELECT *
-FROM retail_sales
-WHERE sale_date = '2022-11-05';
-```
-
-2. **Write a SQL query to retrieve all transactions where the category is 'Clothing' and the quantity sold is more than 4 in the month of Nov-2022**:
-```sql
-SELECT *
-FROM retail_sales
-WHERE 
-    category = 'Clothing'
-    AND 
-    TO_CHAR(sale_date, 'YYYY-MM') = '2022-11'
-    AND
-    quantity >= 4
-```
-
-3. **Write a SQL query to calculate the total sales (total_sale) for each category.**:
+1. **Q1: Sales Analysis:Part1: Sales and Profitability Analysis
+   Merge the List of Orders and Order Details datasets on the basis of Order ID.
+   Calculate the total sales (Amount) for each category across all orders.**:
 ```sql
 SELECT 
-    category,
-    SUM(total_sale) as net_sale,
-    COUNT(*) as total_orders
-FROM retail_sales
-GROUP BY 1
+    o.category,
+    SUM(o.amount) AS total_sales
+FROM 
+    table2 o
+JOIN 
+    table3 od
+    ON o.order_id = od.order_id
+GROUP BY 
+    o.category
+ORDER BY 
+    total_sales DESC;
 ```
 
-4. **Write a SQL query to find the average age of customers who purchased items from the 'Beauty' category.**:
+2. **For each category, calculate the average profit per order and total profit margin
+  (profit as a percentage of Amount).**:
 ```sql
 SELECT
-    ROUND(AVG(age), 2) as avg_age
-FROM retail_sales
-WHERE category = 'Beauty'
+    Category,
+    COUNT(DISTINCT Order_ID) AS total_orders,
+    AVG(Profit) AS avg_profit_per_order,
+    ROUND(SUM(Profit) * 100.0 / NULLIF(SUM(Amount), 0), 2) AS total_profit_margin_percent
+FROM
+    table2
+GROUP BY
+    Category
+ORDER BY
+    Category;
+
 ```
 
-5. **Write a SQL query to find all transactions where the total_sale is greater than 1000.**:
+3. **Identify the top-performing and underperforming categories based on these
+metrics. Also, suggest reasons for their performance differences.**:
 ```sql
-SELECT *
-FROM retail_sales
-WHERE total_sale > 1000
+SELECT
+    Category,
+    COUNT(DISTINCT Order_ID) AS total_orders,
+    AVG(Profit) AS avg_profit_per_order,
+    ROUND(SUM(Profit) * 100.0 / NULLIF(SUM(Amount), 0), 2) AS total_profit_margin_percent
+FROM
+    table2
+GROUP BY
+    Category
+ORDER BY
+    avg_profit_per_order DESC;
+
 ```
 
-6. **Write a SQL query to find the total number of transactions (transaction_id) made by each gender in each category.**:
+4. **Part 2: Target Achievement Analysis
+Using the Sales Target dataset, calculate the percentage change in target sales
+for the Furniture category month-over-month.**:
 ```sql
-SELECT 
-    category,
-    gender,
-    COUNT(*) as total_trans
-FROM retail_sales
-GROUP BY 
-    category,
-    gender
-ORDER BY 1
+SELECT
+    Month_of_order_date,
+    Target AS current_month_target,
+    LAG(Target) OVER (ORDER BY Month_of_order_date) AS previous_month_target,
+    ROUND(
+        (Target - LAG(Target) OVER (ORDER BY Month_of_order_date)) * 100.0 /
+        NULLIF(LAG(Target) OVER (ORDER BY Month_of_order_date), 0), 2
+    ) AS percentage_change
+FROM
+    table1
+WHERE
+    Catogory = 'Furniture'
+ORDER BY
+    Month_of_order_date;
+
+```
+
+5. **Analyse the trends to identify months with significant target fluctuations.
+Suggest strategies for aligning target expectations with actual performance
+trends.**:
+```sql
+SELECT
+    Month_of_order_date,
+    Target AS current_target,
+    LAG(Target) OVER (ORDER BY Month_of_order_date) AS previous_target,
+    ROUND(
+        (Target - LAG(Target) OVER (ORDER BY Month_of_order_date)) * 100.0 /
+        NULLIF(LAG(Target) OVER (ORDER BY Month_of_order_date), 0), 2
+    ) AS percentage_change
+FROM
+    table1
+WHERE
+    Catogory = 'Furniture'
+ORDER BY
+    Month_of_order_date;	
+
+```
+
+6. **Part 3: Regional Performance Insights
+From the List of Orders dataset, identify the top 5 states with the highest order
+count. For each of these states, calculate the total sales and average profit.**:
+```sql
+SELECT
+	t3.state ,
+    COUNT(DISTINCT t3.order_id) AS order_count,
+    SUM(t2.amount) AS total_sales,
+    ROUND(AVG(t2.profit), 2) AS avg_profit
+FROM
+    table3 t3
+JOIN
+    table2 t2
+    ON t3.order_id = t2.order_id
+GROUP BY
+    t3.state
+ORDER BY
+    order_count DESC
+LIMIT 5;
+```
+
+7. **Highlight any regional disparities in sales or profitability. Suggest regions or cities
+that should be prioritized for improvement.**:
+```sql
+SELECT
+    t3.city,
+    COUNT(DISTINCT t3.order_id) AS order_count,
+    SUM(t2.amount) AS total_sales,
+    ROUND(AVG(t2.profit), 2) AS avg_profit
+FROM
+    table3 t3
+JOIN
+    table2 t2
+    ON t3.order_id = t2.order_id
+GROUP BY
+    t3.city
+ORDER BY
+    total_sales ASC  
+
 ```
