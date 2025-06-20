@@ -5,7 +5,7 @@
 **Project Title**:Sales Analysis  
 
 ## Objective
-The objective of this SQL project is to perform a comprehensive analysis of sales, profitability, and regional performance using a relational dataset consisting of order transactions, customer details, and sales targets. The analysis is divided into three key parts:
+The objective of this SQL project is to perform a comprehensive analysis of sales, profitability, and regional performance using a relational dataset consisting of order transactions, customer details, and sales targets.
 
 ## Project Structure
 
